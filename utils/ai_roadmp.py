@@ -1,20 +1,20 @@
-
 import json
-import os
 import streamlit as st
 from groq import Groq
 
 from utils.roadmap_storage import save_roadmap
 
+
+# ==========================================================
+# GROQ CLIENT
+# ==========================================================
+
 api_key = st.secrets["GROQ_API_KEY"]
+
+if not api_key:
+    raise ValueError("GROQ_API_KEY not found in Streamlit Secrets")
+
 client = Groq(api_key=api_key)
-
-
-# ==========================================================
-# LOAD ENVIRONMENT VARIABLES
-# ==========================================================
-
-
 
 
 # ==========================================================
@@ -22,18 +22,6 @@ client = Groq(api_key=api_key)
 # ==========================================================
 
 def generate_ai_roadmap(roadmap_input, user_id):
-
-    # ------------------------------------------------------
-    # API KEY
-    # ------------------------------------------------------
-
-    api_key = os.getenv("GROQ_API_KEY")
-
-    if not api_key:
-        raise ValueError("GROQ_API_KEY not found in .env")
-
-    client = Groq(api_key=api_key)
-
 
     # ------------------------------------------------------
     # TARGET CAREER
@@ -62,7 +50,6 @@ def generate_ai_roadmap(roadmap_input, user_id):
         for item in data:
 
             if isinstance(item, str):
-
                 result.append(item)
 
             elif isinstance(item, dict):
@@ -76,15 +63,12 @@ def generate_ai_roadmap(roadmap_input, user_id):
                 if name:
                     result.append(name)
 
-        # Remove duplicates
-        result = list(dict.fromkeys(result))
-
-        return result[:limit]
+        return list(dict.fromkeys(result))[:limit]
 
 
-    # ------------------------------------------------------
-    # GET ONLY SMALL SKILL LISTS
-    # ------------------------------------------------------
+    # ======================================================
+    # SKILLS
+    # ======================================================
 
     current_skills = extract_skill_names(
         roadmap_input.get("current_skills", []),
@@ -108,7 +92,7 @@ def generate_ai_roadmap(roadmap_input, user_id):
 
 
     # ======================================================
-    # VERY SMALL AI INPUT
+    # AI INPUT
     # ======================================================
 
     ai_input = {
@@ -125,34 +109,33 @@ def generate_ai_roadmap(roadmap_input, user_id):
 
 
     # ======================================================
-    # SHORT PROMPT
+    # PROMPT
     # ======================================================
 
     prompt = f"""
-Create a personalized learning roadmap.
+Create a concise personalized learning roadmap ONLY for:
 
-TARGET CAREER:
-{target_career}
+TARGET CAREER: {target_career}
 
 USER DATA:
 {json.dumps(ai_input, separators=(",", ":"))}
 
 RULES:
 
-- The roadmap must be ONLY for {target_career}.
-- Never replace the target career.
-- Use the user's skill gaps.
-- Respect current skills.
-- Prioritize missing Essential skills.
-- Include prerequisites only when necessary.
-- Start from the user's current level.
-- Create 4 progressive phases.
-- Each phase must have topics and one practical task.
-- Include one mini project.
-- Include one final project specifically for {target_career}.
-- Keep everything concise.
-- Do not invent user skills.
-- Return ONLY valid JSON.
+1. The roadmap MUST be specifically for {target_career}.
+2. Never change or replace the target career.
+3. Use the user's skill gaps and learning priorities.
+4. Respect the user's current skills.
+5. Do not invent user skills.
+6. Create exactly 4 progressive phases.
+7. Each phase must contain exactly 2 topics.
+8. Each topic must have a short description and exactly 1 practice task.
+9. Each phase must have exactly 1 mini project.
+10. Include exactly 1 final project specifically for {target_career}.
+11. Keep descriptions very short.
+12. Return ONLY valid JSON.
+13. Do not use markdown.
+14. Do not include explanations outside JSON.
 
 OUTPUT FORMAT:
 
@@ -165,6 +148,13 @@ OUTPUT FORMAT:
             "skill": "skill",
             "reason": "short reason",
             "topics": [
+                {{
+                    "topic": "topic",
+                    "description": "short description",
+                    "practice": [
+                        "practical task"
+                    ]
+                }},
                 {{
                     "topic": "topic",
                     "description": "short description",
@@ -208,9 +198,9 @@ OUTPUT FORMAT:
                 {
                     "role": "system",
                     "content": (
-                        "You generate concise career-specific "
+                        "Generate concise career-specific "
                         "learning roadmaps. "
-                        "Return only valid JSON."
+                        "Return ONLY valid JSON."
                     )
                 },
                 {
@@ -221,7 +211,7 @@ OUTPUT FORMAT:
 
             temperature=0.2,
 
-            max_completion_tokens=1800,
+            max_completion_tokens=4096,
 
             response_format={
                 "type": "json_object"
