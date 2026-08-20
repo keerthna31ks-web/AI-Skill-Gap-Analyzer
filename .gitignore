@@ -2,5 +2,12 @@ venv/
 __pycache__/
 *.pyc
 .env
-uploads/
-.vscode/
+.streamlit/secrets.toml
+
+test_env.py
+test_groq.py
+test_roadmap.py
+test_roadmap_input.py
+test_skill.py
+test_storage.py
+test_validator.py
