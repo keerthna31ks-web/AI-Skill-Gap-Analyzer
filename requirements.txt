@@ -1,5 +1,7 @@
 streamlit
 pandas
-pymupdf
-plotly
+numpy
+scikit-learn
 mysql-connector-python
+groq
+bcrypt
