@@ -1,18 +1,20 @@
 
 import json
 import os
-
-from dotenv import load_dotenv
+import streamlit as st
 from groq import Groq
 
 from utils.roadmap_storage import save_roadmap
+
+api_key = st.secrets["GROQ_API_KEY"]
+client = Groq(api_key=api_key)
 
 
 # ==========================================================
 # LOAD ENVIRONMENT VARIABLES
 # ==========================================================
 
-load_dotenv()
+
 
 
 # ==========================================================
