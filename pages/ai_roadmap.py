@@ -287,6 +287,14 @@ phases = roadmap.get(
     "phases",
     []
 )
+st.write("DEBUG PHASES:")
+st.write(phases)
+st.write("PHASE TYPE:")
+st.write(type(phases))
+
+for p in phases:
+    st.write("ITEM:", p)
+    st.write("TYPE:", type(p))
 
 
 # --------------------------------------------------
