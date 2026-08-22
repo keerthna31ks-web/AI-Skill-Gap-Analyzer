@@ -354,6 +354,179 @@ OUTPUT FORMAT:
             "AI returned invalid JSON:\n"
             + content
         )
+        
+    # ======================================================
+# VALIDATE AI ROADMAP STRUCTURE
+# ======================================================
+
+    if not isinstance(roadmap, dict):
+        raise ValueError(
+        "AI returned an invalid roadmap object."
+    )
+
+
+# ------------------------------------------------------
+# Validate phases
+# ------------------------------------------------------
+
+    phases = roadmap.get("phases")
+
+
+    if not isinstance(phases, list):
+        raise ValueError(
+        "AI roadmap must contain a phases list."
+    )
+
+
+    if len(phases) != 4:
+        raise ValueError(
+        f"AI returned {len(phases)} phases. "
+        "Expected exactly 4 phases."
+    )
+
+
+# ------------------------------------------------------
+# Validate every phase
+# ------------------------------------------------------
+
+    for phase_index, phase in enumerate(
+    phases,
+    start=1
+):
+
+        if not isinstance(phase, dict):
+            raise ValueError(
+            f"Phase {phase_index} is invalid. "
+            "Each phase must be a JSON object."
+        )
+
+
+    # Phase number
+
+    if "phase" not in phase:
+
+        raise ValueError(
+            f"Phase {phase_index} is missing 'phase'."
+        )
+
+
+    # Skill
+
+    if "skill" not in phase:
+
+        raise ValueError(
+            f"Phase {phase_index} is missing 'skill'."
+        )
+
+
+    # Topics
+
+    topics = phase.get("topics")
+
+
+    if not isinstance(topics, list):
+
+        raise ValueError(
+            f"Phase {phase_index} topics must be a list."
+        )
+
+
+    if len(topics) != 2:
+
+        raise ValueError(
+            f"Phase {phase_index} must contain "
+            "exactly 2 topics."
+        )
+
+
+    # --------------------------------------------------
+    # Validate topics
+    # --------------------------------------------------
+
+    for topic_index, topic in enumerate(
+        topics,
+        start=1
+    ):
+
+        if not isinstance(topic, dict):
+
+            raise ValueError(
+                f"Phase {phase_index}, topic "
+                f"{topic_index} is invalid."
+            )
+
+
+        if not topic.get("topic"):
+
+            raise ValueError(
+                f"Phase {phase_index}, topic "
+                f"{topic_index} is missing topic name."
+            )
+
+
+        if not topic.get("description"):
+
+            raise ValueError(
+                f"Phase {phase_index}, topic "
+                f"{topic_index} is missing description."
+            )
+
+
+        practice = topic.get(
+            "practice"
+        )
+
+
+        if not isinstance(practice, list):
+
+            raise ValueError(
+                f"Phase {phase_index}, topic "
+                f"{topic_index} practice must be a list."
+            )
+
+
+        if len(practice) != 1:
+
+            raise ValueError(
+                f"Phase {phase_index}, topic "
+                f"{topic_index} must have exactly "
+                "1 practice task."
+            )
+
+
+# ------------------------------------------------------
+# Validate final project
+# ------------------------------------------------------
+
+final_project = roadmap.get(
+    "final_project"
+)
+
+
+if not isinstance(
+    final_project,
+    dict
+):
+
+    raise ValueError(
+        "AI roadmap is missing a valid final project."
+    )
+
+
+if not final_project.get("title"):
+
+    raise ValueError(
+        "Final project is missing a title."
+    )
+
+
+if not final_project.get("description"):
+
+    raise ValueError(
+        "Final project is missing a description."
+    )
+        
+        
 
     # ======================================================
     # VALIDATE TOP-LEVEL STRUCTURE

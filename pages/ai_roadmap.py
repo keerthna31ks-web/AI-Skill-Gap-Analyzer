@@ -283,18 +283,49 @@ st.write(
 )
 
 
+# --------------------------------------------------
+# Validate stored roadmap phases
+# --------------------------------------------------
+
 phases = roadmap.get(
     "phases",
     []
 )
-st.write("DEBUG PHASES:")
-st.write(phases)
-st.write("PHASE TYPE:")
-st.write(type(phases))
 
-for p in phases:
-    st.write("ITEM:", p)
-    st.write("TYPE:", type(p))
+
+if not isinstance(phases, list):
+
+    st.error(
+        "This roadmap contains invalid phase data."
+    )
+
+    st.stop()
+
+
+# Only dictionary phase objects are valid
+
+invalid_phase = any(
+    not isinstance(phase, dict)
+    for phase in phases
+)
+
+
+if invalid_phase:
+
+    st.error(
+        "⚠️ This saved roadmap is corrupted. "
+        "Please generate a new roadmap."
+    )
+
+    if st.button(
+        "🔄 Return to Dashboard"
+    ):
+
+        st.switch_page(
+            "pages/dashboard.py"
+        )
+
+    st.stop()
 
 
 # --------------------------------------------------
