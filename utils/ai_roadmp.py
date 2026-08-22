@@ -18,6 +18,120 @@ client = Groq(api_key=api_key)
 
 
 # ==========================================================
+# ROADMAP VALIDATION
+# ==========================================================
+
+def validate_roadmap(roadmap):
+
+    if not isinstance(roadmap, dict):
+        raise ValueError(
+            "AI returned an invalid roadmap object."
+        )
+
+    phases = roadmap.get("phases")
+
+    if not isinstance(phases, list):
+        raise ValueError(
+            "AI roadmap 'phases' must be a list."
+        )
+
+    if len(phases) != 4:
+        raise ValueError(
+            f"AI returned {len(phases)} phases. "
+            "Expected exactly 4 phases."
+        )
+
+    for phase_index, phase in enumerate(
+        phases,
+        start=1
+    ):
+
+        if not isinstance(phase, dict):
+            raise ValueError(
+                f"Phase {phase_index} is invalid."
+            )
+
+        if "phase" not in phase:
+            raise ValueError(
+                f"Phase {phase_index} is missing 'phase'."
+            )
+
+        if not phase.get("skill"):
+            raise ValueError(
+                f"Phase {phase_index} is missing 'skill'."
+            )
+
+        topics = phase.get("topics")
+
+        if not isinstance(topics, list):
+            raise ValueError(
+                f"Phase {phase_index} topics must be a list."
+            )
+
+        if len(topics) != 2:
+            raise ValueError(
+                f"Phase {phase_index} must contain exactly 2 topics."
+            )
+
+        for topic_index, topic in enumerate(
+            topics,
+            start=1
+        ):
+
+            if not isinstance(topic, dict):
+                raise ValueError(
+                    f"Phase {phase_index}, topic "
+                    f"{topic_index} is invalid."
+                )
+
+            if not topic.get("topic"):
+                raise ValueError(
+                    f"Phase {phase_index}, topic "
+                    f"{topic_index} is missing a topic name."
+                )
+
+            if not topic.get("description"):
+                raise ValueError(
+                    f"Phase {phase_index}, topic "
+                    f"{topic_index} is missing a description."
+                )
+
+            practice = topic.get("practice")
+
+            if not isinstance(practice, list):
+                raise ValueError(
+                    f"Phase {phase_index}, topic "
+                    f"{topic_index} practice must be a list."
+                )
+
+            if len(practice) != 1:
+                raise ValueError(
+                    f"Phase {phase_index}, topic "
+                    f"{topic_index} must contain exactly "
+                    "1 practice task."
+                )
+
+    final_project = roadmap.get("final_project")
+
+    if not isinstance(final_project, dict):
+        raise ValueError(
+            "AI roadmap is missing a valid final project."
+        )
+
+    if not final_project.get("title"):
+        raise ValueError(
+            "Final project is missing a title."
+        )
+
+    if not final_project.get("description"):
+        raise ValueError(
+            "Final project is missing a description."
+        )
+
+    return True
+
+
+# ==========================================================
 # GENERATE AI ROADMAP
 # ==========================================================
 
@@ -33,7 +147,10 @@ def generate_ai_roadmap(roadmap_input, user_id):
         target_career = roadmap_input.get("target_career")
 
     if not target_career:
-        raise ValueError("Target career not found")
+        raise ValueError(
+            "Target career not found"
+        )
+
 
     # ======================================================
     # COMPACT SKILL EXTRACTION
@@ -49,6 +166,7 @@ def generate_ai_roadmap(roadmap_input, user_id):
         for item in data:
 
             if isinstance(item, str):
+
                 result.append(item)
 
             elif isinstance(item, dict):
@@ -62,7 +180,10 @@ def generate_ai_roadmap(roadmap_input, user_id):
                 if name:
                     result.append(name)
 
-        return list(dict.fromkeys(result))[:limit]
+        return list(
+            dict.fromkeys(result)
+        )[:limit]
+
 
     # ======================================================
     # SKILLS
@@ -88,13 +209,16 @@ def generate_ai_roadmap(roadmap_input, user_id):
         12
     )
 
+
     # ======================================================
     # AI INPUT
     # ======================================================
 
     ai_input = {
         "career": target_career,
-        "readiness_score": roadmap_input.get("readiness_score"),
+        "readiness_score": roadmap_input.get(
+            "readiness_score"
+        ),
         "skill_gap_percentage": roadmap_input.get(
             "skill_gap_percentage"
         ),
@@ -103,6 +227,7 @@ def generate_ai_roadmap(roadmap_input, user_id):
         "skill_gaps": skill_gaps,
         "learning_priority": learning_priority
     }
+
 
     # ======================================================
     # PROMPT
@@ -133,37 +258,6 @@ RULES:
 13. Do not use markdown.
 14. Do not include explanations outside JSON.
 
-IMPORTANT JSON STRUCTURE:
-
-The top-level JSON object MUST contain:
-
-- career
-- roadmap_summary
-- phases
-- final_project
-
-"phases" MUST be an array containing exactly 4 objects.
-
-Each phase MUST have:
-
-- phase
-- skill
-- reason
-- topics
-- mini_project
-
-Each "topics" array MUST contain exactly 2 objects.
-
-Each topic MUST have:
-
-- topic
-- description
-- practice
-
-Each "practice" array MUST contain exactly 1 string.
-
-"final_project" MUST be an object.
-
 OUTPUT FORMAT:
 
 {{
@@ -172,90 +266,6 @@ OUTPUT FORMAT:
     "phases": [
         {{
             "phase": 1,
-            "skill": "skill",
-            "reason": "short reason",
-            "topics": [
-                {{
-                    "topic": "topic",
-                    "description": "short description",
-                    "practice": [
-                        "practical task"
-                    ]
-                }},
-                {{
-                    "topic": "topic",
-                    "description": "short description",
-                    "practice": [
-                        "practical task"
-                    ]
-                }}
-            ],
-            "mini_project": {{
-                "title": "project title",
-                "description": "short description",
-                "skills_used": [
-                    "skill"
-                ]
-            }}
-        }},
-        {{
-            "phase": 2,
-            "skill": "skill",
-            "reason": "short reason",
-            "topics": [
-                {{
-                    "topic": "topic",
-                    "description": "short description",
-                    "practice": [
-                        "practical task"
-                    ]
-                }},
-                {{
-                    "topic": "topic",
-                    "description": "short description",
-                    "practice": [
-                        "practical task"
-                    ]
-                }}
-            ],
-            "mini_project": {{
-                "title": "project title",
-                "description": "short description",
-                "skills_used": [
-                    "skill"
-                ]
-            }}
-        }},
-        {{
-            "phase": 3,
-            "skill": "skill",
-            "reason": "short reason",
-            "topics": [
-                {{
-                    "topic": "topic",
-                    "description": "short description",
-                    "practice": [
-                        "practical task"
-                    ]
-                }},
-                {{
-                    "topic": "topic",
-                    "description": "short description",
-                    "practice": [
-                        "practical task"
-                    ]
-                }}
-            ],
-            "mini_project": {{
-                "title": "project title",
-                "description": "short description",
-                "skills_used": [
-                    "skill"
-                ]
-            }}
-        }},
-        {{
-            "phase": 4,
             "skill": "skill",
             "reason": "short reason",
             "topics": [
@@ -293,6 +303,7 @@ OUTPUT FORMAT:
     }}
 }}
 """
+
 
     # ======================================================
     # CALL GROQ
@@ -334,11 +345,13 @@ OUTPUT FORMAT:
             f"Groq API error: {str(e)}"
         )
 
+
     # ======================================================
     # GET RESPONSE
     # ======================================================
 
     content = response.choices[0].message.content.strip()
+
 
     # ======================================================
     # PARSE JSON
@@ -354,383 +367,21 @@ OUTPUT FORMAT:
             "AI returned invalid JSON:\n"
             + content
         )
-        
-    # ======================================================
-# VALIDATE AI ROADMAP STRUCTURE
-# ======================================================
 
-    if not isinstance(roadmap, dict):
-        raise ValueError(
-        "AI returned an invalid roadmap object."
-    )
-
-
-# ------------------------------------------------------
-# Validate phases
-# ------------------------------------------------------
-
-    phases = roadmap.get("phases")
-
-
-    if not isinstance(phases, list):
-        raise ValueError(
-        "AI roadmap must contain a phases list."
-    )
-
-
-    if len(phases) != 4:
-        raise ValueError(
-        f"AI returned {len(phases)} phases. "
-        "Expected exactly 4 phases."
-    )
-
-
-# ------------------------------------------------------
-# Validate every phase
-# ------------------------------------------------------
-
-    for phase_index, phase in enumerate(
-    phases,
-    start=1
-):
-
-        if not isinstance(phase, dict):
-            raise ValueError(
-            f"Phase {phase_index} is invalid. "
-            "Each phase must be a JSON object."
-        )
-
-
-    # Phase number
-
-    if "phase" not in phase:
-
-        raise ValueError(
-            f"Phase {phase_index} is missing 'phase'."
-        )
-
-
-    # Skill
-
-    if "skill" not in phase:
-
-        raise ValueError(
-            f"Phase {phase_index} is missing 'skill'."
-        )
-
-
-    # Topics
-
-    topics = phase.get("topics")
-
-
-    if not isinstance(topics, list):
-
-        raise ValueError(
-            f"Phase {phase_index} topics must be a list."
-        )
-
-
-    if len(topics) != 2:
-
-        raise ValueError(
-            f"Phase {phase_index} must contain "
-            "exactly 2 topics."
-        )
-
-
-    # --------------------------------------------------
-    # Validate topics
-    # --------------------------------------------------
-
-    for topic_index, topic in enumerate(
-        topics,
-        start=1
-    ):
-
-        if not isinstance(topic, dict):
-
-            raise ValueError(
-                f"Phase {phase_index}, topic "
-                f"{topic_index} is invalid."
-            )
-
-
-        if not topic.get("topic"):
-
-            raise ValueError(
-                f"Phase {phase_index}, topic "
-                f"{topic_index} is missing topic name."
-            )
-
-
-        if not topic.get("description"):
-
-            raise ValueError(
-                f"Phase {phase_index}, topic "
-                f"{topic_index} is missing description."
-            )
-
-
-        practice = topic.get(
-            "practice"
-        )
-
-
-        if not isinstance(practice, list):
-
-            raise ValueError(
-                f"Phase {phase_index}, topic "
-                f"{topic_index} practice must be a list."
-            )
-
-
-        if len(practice) != 1:
-
-            raise ValueError(
-                f"Phase {phase_index}, topic "
-                f"{topic_index} must have exactly "
-                "1 practice task."
-            )
-
-
-# ------------------------------------------------------
-# Validate final project
-# ------------------------------------------------------
-
-final_project = roadmap.get(
-    "final_project"
-)
-
-
-if not isinstance(
-    final_project,
-    dict
-):
-
-    raise ValueError(
-        "AI roadmap is missing a valid final project."
-    )
-
-
-if not final_project.get("title"):
-
-    raise ValueError(
-        "Final project is missing a title."
-    )
-
-
-if not final_project.get("description"):
-
-    raise ValueError(
-        "Final project is missing a description."
-    )
-        
-        
 
     # ======================================================
-    # VALIDATE TOP-LEVEL STRUCTURE
+    # VALIDATE ROADMAP
     # ======================================================
 
-    if not isinstance(roadmap, dict):
+    validate_roadmap(roadmap)
 
-        raise ValueError(
-            "AI roadmap must be a JSON object."
-        )
-
-    # ======================================================
-    # VALIDATE PHASES
-    # ======================================================
-
-    phases = roadmap.get("phases")
-
-    if not isinstance(phases, list):
-
-        raise ValueError(
-            "AI roadmap 'phases' must be a list."
-        )
-
-    if len(phases) != 4:
-
-        raise ValueError(
-            f"AI roadmap must contain exactly 4 phases. "
-            f"Received {len(phases)}."
-        )
-
-    # ======================================================
-    # VALIDATE EACH PHASE
-    # ======================================================
-
-    for index, phase in enumerate(
-        phases,
-        start=1
-    ):
-
-        if not isinstance(phase, dict):
-
-            raise ValueError(
-                f"Phase {index} is invalid. "
-                "Each phase must be an object."
-            )
-
-        if "phase" not in phase:
-
-            raise ValueError(
-                f"Phase {index} is missing 'phase'."
-            )
-
-        if "skill" not in phase:
-
-            raise ValueError(
-                f"Phase {index} is missing 'skill'."
-            )
-
-        if "reason" not in phase:
-
-            raise ValueError(
-                f"Phase {index} is missing 'reason'."
-            )
-
-        if "topics" not in phase:
-
-            raise ValueError(
-                f"Phase {index} is missing 'topics'."
-            )
-
-        if not isinstance(
-            phase["topics"],
-            list
-        ):
-
-            raise ValueError(
-                f"Phase {index} topics must be a list."
-            )
-
-        if len(phase["topics"]) != 2:
-
-            raise ValueError(
-                f"Phase {index} must contain exactly "
-                f"2 topics."
-            )
-
-        if "mini_project" not in phase:
-
-            raise ValueError(
-                f"Phase {index} is missing "
-                "'mini_project'."
-            )
-
-        if not isinstance(
-            phase["mini_project"],
-            dict
-        ):
-
-            raise ValueError(
-                f"Phase {index} mini_project "
-                "must be an object."
-            )
-
-        # ==================================================
-        # VALIDATE TOPICS
-        # ==================================================
-
-        for topic_index, topic in enumerate(
-            phase["topics"],
-            start=1
-        ):
-
-            if not isinstance(
-                topic,
-                dict
-            ):
-
-                raise ValueError(
-                    f"Phase {index}, topic "
-                    f"{topic_index} is invalid."
-                )
-
-            if "topic" not in topic:
-
-                raise ValueError(
-                    f"Phase {index}, topic "
-                    f"{topic_index} is missing "
-                    "'topic'."
-                )
-
-            if "description" not in topic:
-
-                raise ValueError(
-                    f"Phase {index}, topic "
-                    f"{topic_index} is missing "
-                    "'description'."
-                )
-
-            if "practice" not in topic:
-
-                raise ValueError(
-                    f"Phase {index}, topic "
-                    f"{topic_index} is missing "
-                    "'practice'."
-                )
-
-            if not isinstance(
-                topic["practice"],
-                list
-            ):
-
-                raise ValueError(
-                    f"Phase {index}, topic "
-                    f"{topic_index} practice "
-                    "must be a list."
-                )
-
-            if len(topic["practice"]) != 1:
-
-                raise ValueError(
-                    f"Phase {index}, topic "
-                    f"{topic_index} must contain "
-                    f"exactly 1 practice task."
-                )
-
-    # ======================================================
-    # VALIDATE FINAL PROJECT
-    # ======================================================
-
-    final_project = roadmap.get(
-        "final_project"
-    )
-
-    if not isinstance(
-        final_project,
-        dict
-    ):
-
-        raise ValueError(
-            "AI roadmap is missing a valid "
-            "final_project."
-        )
-
-    required_final_fields = [
-        "title",
-        "description",
-        "skills_used",
-        "expected_outcome"
-    ]
-
-    for field in required_final_fields:
-
-        if field not in final_project:
-
-            raise ValueError(
-                f"Final project is missing "
-                f"'{field}'."
-            )
 
     # ======================================================
     # FORCE CORRECT CAREER
     # ======================================================
 
     roadmap["career"] = target_career
+
 
     # ======================================================
     # SAVE TO DATABASE
@@ -747,10 +398,10 @@ if not final_project.get("description"):
     except Exception as e:
 
         raise ValueError(
-            "Roadmap generated but database "
-            "save failed: "
+            "Roadmap generated but database save failed: "
             + str(e)
         )
+
 
     # ======================================================
     # RETURN
