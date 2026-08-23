@@ -534,14 +534,7 @@ OUTPUT STRUCTURE:
             response_format={
                 "type": "json_schema",
 
-                "json_schema": {
-
-                    "name": "ai_learning_roadmap",
-
-                    "strict": False,
-
-                    "schema": roadmap_schema
-                }
+                
             }
         )
 
