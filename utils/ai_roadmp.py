@@ -538,7 +538,7 @@ OUTPUT STRUCTURE:
 
                     "name": "ai_learning_roadmap",
 
-                    "strict": True,
+                    "strict": False,
 
                     "schema": roadmap_schema
                 }
