@@ -532,10 +532,16 @@ OUTPUT STRUCTURE:
             max_completion_tokens=4096,
 
             response_format={
-                "type": "json_object",
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "career_roadmap",
+                    "strict": True,
+                    "schema": roadmap_schema
+    }
+}
 
                 
-            }
+            
         )
 
     except Exception as e:
