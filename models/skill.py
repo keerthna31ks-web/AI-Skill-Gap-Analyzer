@@ -1067,9 +1067,7 @@ def get_roadmap_input(user_id):
     print("DEBUG TARGET ROLE:", target_role)
 
     if not target_role:
-        raise ValueError(
-            "No target career found for this user."
-        )
+        return None
 
 
     # --------------------------------------------------
