@@ -145,19 +145,19 @@ def get_career_required_skills(career_id):
 def get_career_skill_details(career_id):
 
     connection = get_connection()
-    cursor = connection.cursor()
+    cursor = connection.cursor(dictionary=True)
 
     query = """
-    SELECT
-        s.skill_name,
-        cs.importance,
-        cs.required_proficiency,
-        cs.priority
-    FROM career_skills cs
-    JOIN skills s
-        ON cs.skill_id = s.skill_id
-    WHERE cs.career_id = %s
-    ORDER BY cs.priority ASC
+        SELECT
+            s.skill_name,
+            cs.importance,
+            cs.required_proficiency,
+            cs.priority
+        FROM career_skills cs
+        JOIN skills s
+            ON cs.skill_id = s.skill_id
+        WHERE cs.career_id = %s
+        ORDER BY cs.priority ASC
     """
 
     cursor.execute(query, (career_id,))
@@ -770,12 +770,43 @@ def calculate_proficiency_readiness(
         "reactjs": "react"
     }
 
-    # Create user skill → proficiency map
+    # --------------------------------------------------
+    # User Skill Map
+    # --------------------------------------------------
+
     user_skill_map = {}
 
-    for skill, proficiency in user_skills:
+    for item in user_skills:
 
-        normalized_skill = skill.strip().lower()
+        if isinstance(item, dict):
+
+            skill = (
+                item.get("skill")
+                or item.get("skill_name")
+                or item.get("name")
+            )
+
+            proficiency = (
+                item.get("proficiency")
+                or item.get("level")
+                or "beginner"
+            )
+
+        else:
+
+            try:
+                skill, proficiency = item
+            except (TypeError, ValueError):
+                continue
+
+        if not skill:
+            continue
+
+        normalized_skill = (
+            str(skill)
+            .strip()
+            .lower()
+        )
 
         normalized_skill = aliases.get(
             normalized_skill,
@@ -783,8 +814,14 @@ def calculate_proficiency_readiness(
         )
 
         user_skill_map[normalized_skill] = (
-            proficiency.strip().lower()
+            str(proficiency)
+            .strip()
+            .lower()
         )
+
+    # --------------------------------------------------
+    # Scores
+    # --------------------------------------------------
 
     total_weight = 0
     achieved_weight = 0
@@ -793,42 +830,123 @@ def calculate_proficiency_readiness(
     partial_skills = []
     missing_skills = []
 
-    for (
-        skill_name,
-        importance,
-        required_proficiency,
-        priority
-    ) in career_skill_details:
+    # --------------------------------------------------
+    # Career Requirements
+    # --------------------------------------------------
 
-        skill = skill_name.strip().lower()
+    for item in career_skill_details:
 
-        # Importance weight
-        if importance.lower() == "essential":
-            weight = 3
-        elif importance.lower() == "important":
-            weight = 2
+        # Support dictionary format
+        if isinstance(item, dict):
+
+            skill_name = item.get(
+                "skill_name",
+                ""
+            )
+
+            importance = item.get(
+                "importance",
+                "Important"
+            )
+
+            required_proficiency = item.get(
+                "required_proficiency",
+                "Beginner"
+            )
+
+            priority = item.get(
+                "priority",
+                0
+            )
+
+        # Support tuple format too
         else:
+
+            try:
+
+                (
+                    skill_name,
+                    importance,
+                    required_proficiency,
+                    priority
+                ) = item
+
+            except (TypeError, ValueError):
+
+                continue
+
+        if not skill_name:
+            continue
+
+        skill = (
+            str(skill_name)
+            .strip()
+            .lower()
+        )
+
+        importance = (
+            str(importance)
+            .strip()
+        )
+
+        required_proficiency = (
+            str(required_proficiency)
+            .strip()
+        )
+
+        # --------------------------------------------------
+        # Importance Weight
+        # --------------------------------------------------
+
+        importance_lower = importance.lower()
+
+        if importance_lower == "essential":
+
+            weight = 3
+
+        elif importance_lower == "important":
+
+            weight = 2
+
+        else:
+
             weight = 1
 
         total_weight += weight
 
-        # Required proficiency
+        # --------------------------------------------------
+        # Required Proficiency
+        # --------------------------------------------------
+
         required_level = proficiency_levels.get(
-            required_proficiency.strip().lower(),
+            required_proficiency.lower(),
             1
         )
 
-        # Skill missing
+        # --------------------------------------------------
+        # Missing Skill
+        # --------------------------------------------------
+
         if skill not in user_skill_map:
 
             missing_skills.append({
+
                 "skill": skill_name,
+
                 "importance": importance,
-                "required_proficiency": required_proficiency,
+
+                "required_proficiency":
+                    required_proficiency,
+
                 "priority": priority
+
             })
 
             credit = 0
+
+        # --------------------------------------------------
+        # Existing Skill
+        # --------------------------------------------------
 
         else:
 
@@ -839,81 +957,145 @@ def calculate_proficiency_readiness(
                 1
             )
 
-            # Full match
+            # --------------------------------------------------
+            # Full Match
+            # --------------------------------------------------
+
             if user_level >= required_level:
 
                 matched_skills.append({
+
                     "skill": skill_name,
+
                     "importance": importance,
-                    "user_proficiency": user_proficiency,
-                    "required_proficiency": required_proficiency,
+
+                    "user_proficiency":
+                        user_proficiency,
+
+                    "required_proficiency":
+                        required_proficiency,
+
                     "priority": priority
+
                 })
 
                 credit = 1
 
-            # Partial match
+            # --------------------------------------------------
+            # Partial Match
+            # --------------------------------------------------
+
             else:
 
                 partial_skills.append({
+
                     "skill": skill_name,
+
                     "importance": importance,
-                    "user_proficiency": user_proficiency,
-                    "required_proficiency": required_proficiency,
+
+                    "user_proficiency":
+                        user_proficiency,
+
+                    "required_proficiency":
+                        required_proficiency,
+
                     "priority": priority
+
                 })
 
                 credit = 0.5
 
-        achieved_weight += weight * credit
+        achieved_weight += (
+            weight * credit
+        )
 
-    # Final readiness
+    # --------------------------------------------------
+    # Readiness
+    # --------------------------------------------------
+
     if total_weight > 0:
+
         readiness_score = (
-            achieved_weight / total_weight
+            achieved_weight /
+            total_weight
         ) * 100
+
     else:
+
         readiness_score = 0
 
+    skill_gap_percentage = (
+        100 - readiness_score
+    )
+
+    # --------------------------------------------------
+    # Final Result
+    # --------------------------------------------------
+
     return {
-        "matched_skills": matched_skills,
-        "partial_skills": partial_skills,
-        "missing_skills": missing_skills,
-        "readiness_score": round(readiness_score, 2),
-        "skill_gap_percentage": round(
-            100 - readiness_score,
-            2
-        )
+
+        "matched_skills":
+            matched_skills,
+
+        "partial_skills":
+            partial_skills,
+
+        "missing_skills":
+            missing_skills,
+
+        "readiness_score":
+            round(
+                readiness_score,
+                2
+            ),
+
+        "skill_gap_percentage":
+            round(
+                skill_gap_percentage,
+                2
+            )
     }
-    
-    
 def get_roadmap_input(user_id):
 
     # --------------------------------------------------
-    # User's selected target career
+    # Target Career
     # --------------------------------------------------
 
-    target_role = get_target_role(user_id)
+    target_role = get_target_role(
+        user_id
+    )
 
     if not target_role:
         return None
 
+    target_role = (
+        str(target_role)
+        .strip()
+    )
 
     # --------------------------------------------------
-    # Find selected career
+    # Database
     # --------------------------------------------------
 
     connection = get_connection()
-    cursor = connection.cursor(dictionary=True)
+    cursor = connection.cursor(
+        dictionary=True
+    )
 
     query = """
-        SELECT career_id, career_name
+        SELECT
+            career_id,
+            career_name
         FROM careers
         WHERE career_name = %s
+          AND status = 1
         LIMIT 1
     """
 
-    cursor.execute(query, (target_role,))
+    cursor.execute(
+        query,
+        (target_role,)
+    )
 
     career = cursor.fetchone()
 
@@ -925,29 +1107,59 @@ def get_roadmap_input(user_id):
 
     career_id = career["career_id"]
 
-
     # --------------------------------------------------
-    # Get user's skills + proficiency
-    # --------------------------------------------------
-
-    user_skills = get_user_skills(user_id)
-
-
-    # --------------------------------------------------
-    # Get requirements ONLY for selected career
+    # User Skills
     # --------------------------------------------------
 
-    career_skill_details = get_career_skill_details(
-        career_id
+    user_skills = get_user_skills(
+        user_id
     )
 
-    # Safety check
-    if not career_skill_details:
-        return None
-
+    if user_skills is None:
+        user_skills = []
 
     # --------------------------------------------------
-    # Proficiency-aware analysis
+    # Career Skill Requirements
+    # --------------------------------------------------
+
+    career_skill_details = (
+        get_career_skill_details(
+            career_id
+        )
+    )
+
+    if career_skill_details is None:
+        career_skill_details = []
+
+    # If career has no mappings
+    if not career_skill_details:
+
+        return {
+
+            "career": target_role,
+
+            "target_career": target_role,
+
+            "career_id": career_id,
+
+            "readiness_score": 0,
+
+            "skill_gap_percentage": 100,
+
+            "current_skills": [],
+
+            "partial_skills": [],
+
+            "skill_gaps": [],
+
+            "learning_priority": [],
+
+            "career_recommendations": []
+
+        }
+
+    # --------------------------------------------------
+    # Skill Gap Calculation
     # --------------------------------------------------
 
     result = calculate_proficiency_readiness(
@@ -955,20 +1167,48 @@ def get_roadmap_input(user_id):
         career_skill_details
     )
 
-
     # --------------------------------------------------
     # Current Skills
     # --------------------------------------------------
 
     current_skills = []
 
-    for skill, proficiency in user_skills:
+    for item in user_skills:
 
-        current_skills.append({
-            "skill": skill,
-            "proficiency": proficiency
-        })
+        if isinstance(item, dict):
 
+            skill = (
+                item.get("skill")
+                or item.get("skill_name")
+                or item.get("name")
+            )
+
+            proficiency = (
+                item.get("proficiency")
+                or item.get("level")
+                or "Beginner"
+            )
+
+        else:
+
+            try:
+
+                skill, proficiency = item
+
+            except (TypeError, ValueError):
+
+                continue
+
+        if skill:
+
+            current_skills.append({
+
+                "skill": skill,
+
+                "proficiency":
+                    proficiency
+
+            })
 
     # --------------------------------------------------
     # Skill Gaps
@@ -976,15 +1216,38 @@ def get_roadmap_input(user_id):
 
     skill_gaps = []
 
-    for skill in result["missing_skills"]:
+    for skill in result.get(
+        "missing_skills",
+        []
+    ):
 
         skill_gaps.append({
-            "skill": skill["skill"],
-            "importance": skill["importance"],
-            "required_proficiency": skill["required_proficiency"],
-            "priority": skill["priority"]
-        })
 
+            "skill":
+                skill.get(
+                    "skill",
+                    ""
+                ),
+
+            "importance":
+                skill.get(
+                    "importance",
+                    ""
+                ),
+
+            "required_proficiency":
+                skill.get(
+                    "required_proficiency",
+                    ""
+                ),
+
+            "priority":
+                skill.get(
+                    "priority",
+                    0
+                )
+
+        })
 
     # --------------------------------------------------
     # Partial Skills
@@ -992,17 +1255,45 @@ def get_roadmap_input(user_id):
 
     partial_skills = []
 
-    for skill in result["partial_skills"]:
+    for skill in result.get(
+        "partial_skills",
+        []
+    ):
 
         partial_skills.append({
-            "skill": skill["skill"],
-            "importance": skill["importance"],
-            "user_proficiency": skill["user_proficiency"],
-            "required_proficiency": skill["required_proficiency"],
-            "priority": skill["priority"]
+
+            "skill":
+                skill.get(
+                    "skill",
+                    ""
+                ),
+
+            "importance":
+                skill.get(
+                    "importance",
+                    ""
+                ),
+
+            "user_proficiency":
+                skill.get(
+                    "user_proficiency",
+                    ""
+                ),
+
+            "required_proficiency":
+                skill.get(
+                    "required_proficiency",
+                    ""
+                ),
+
+            "priority":
+                skill.get(
+                    "priority",
+                    0
+                )
+
         })
 
-
     # --------------------------------------------------
     # Learning Priority
     # --------------------------------------------------
@@ -1012,61 +1303,113 @@ def get_roadmap_input(user_id):
         partial_skills
     )
 
-    learning_items.sort(
-        key=lambda x: (
-            0 if x["importance"].lower() == "essential"
-            else 1 if x["importance"].lower() == "important"
-            else 2,
-            x["priority"]
+    def priority_sort(item):
+
+        importance = (
+            str(
+                item.get(
+                    "importance",
+                    ""
+                )
+            )
+            .lower()
         )
-    )
 
-        # --------------------------------------------------
-    # Learning Priority
-    # --------------------------------------------------
+        if importance == "essential":
 
-    learning_items = (
-        skill_gaps +
-        partial_skills
-    )
+            importance_rank = 0
+
+        elif importance == "important":
+
+            importance_rank = 1
+
+        else:
+
+            importance_rank = 2
+
+        try:
+
+            priority = int(
+                item.get(
+                    "priority",
+                    0
+                )
+            )
+
+        except (TypeError, ValueError):
+
+            priority = 0
+
+        return (
+            importance_rank,
+            priority
+        )
 
     learning_items.sort(
-        key=lambda x: (
-            0 if x["importance"].lower() == "essential"
-            else 1 if x["importance"].lower() == "important"
-            else 2,
-            x["priority"]
-        )
+        key=priority_sort
     )
 
     learning_priority = [
-        skill["skill"]
-        for skill in learning_items
+
+        item["skill"]
+
+        for item in learning_items
+
+        if item.get("skill")
+
     ]
 
+    # --------------------------------------------------
+    # Career Recommendations
+    # --------------------------------------------------
+
+    try:
+
+        career_recommendations = (
+            get_career_recommendation_details(
+                user_id
+            )
+        )
+
+    except Exception as e:
+
+        print(
+            "Career recommendation error:",
+            e
+        )
+
+        career_recommendations = []
+
+    if career_recommendations is None:
+
+        career_recommendations = []
 
     # --------------------------------------------------
-    # Career Recommendations & Ranking
+    # Final Output
     # --------------------------------------------------
-
-    career_recommendations = get_career_recommendation_details( user_id)
-
-    print(career_recommendations)
-
 
     return {
 
-        "career": target_role,
+        "career":
+            target_role,
 
-        "target_career": target_role,
+        "target_career":
+            target_role,
 
-        "career_id": career_id,
+        "career_id":
+            career_id,
 
         "readiness_score":
-            result["readiness_score"],
+            result.get(
+                "readiness_score",
+                0
+            ),
 
         "skill_gap_percentage":
-            result["skill_gap_percentage"],
+            result.get(
+                "skill_gap_percentage",
+                100
+            ),
 
         "current_skills":
             current_skills,
@@ -1082,6 +1425,7 @@ def get_roadmap_input(user_id):
 
         "career_recommendations":
             career_recommendations
+
     }
     
 def mark_skill_learned(user_id, skill_name):
