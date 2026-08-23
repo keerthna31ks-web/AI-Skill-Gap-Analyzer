@@ -532,7 +532,7 @@ OUTPUT STRUCTURE:
             max_completion_tokens=4096,
 
             response_format={
-                "type": "json_schema",
+                "type": "json_object",
 
                 
             }
