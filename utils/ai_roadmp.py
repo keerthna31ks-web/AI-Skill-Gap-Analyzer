@@ -2,7 +2,7 @@ import json
 import streamlit as st
 from groq import Groq
 
-from utils.roadmap_storage import save_roadmap
+from utils.roadmap_storage import get_user_roadmaps, save_roadmap
 
 
 # ==========================================================
@@ -546,10 +546,38 @@ OUTPUT STRUCTURE:
 
     except Exception as e:
 
-        raise ValueError(
-            f"Groq API error: {str(e)}"
-        )
+        try:
 
+            previous_roadmaps = get_user_roadmaps(
+                user_id
+            )
+
+            if previous_roadmaps:
+
+                previous_roadmap = previous_roadmaps[0].get(
+                    "roadmap_json"
+                )
+
+                if previous_roadmap:
+
+                    print(
+                        "DEBUG: Groq failed. "
+                        "Using previous saved roadmap."
+                    )
+
+                    return previous_roadmap
+
+        except Exception as fallback_error:
+
+            print(
+                "DEBUG: Previous roadmap fallback failed:",
+                fallback_error
+            )
+
+        raise ValueError(
+            "Unable to generate a new roadmap right now. "
+            "Please try again."
+        )
 
     # ======================================================
     # GET RESPONSE
